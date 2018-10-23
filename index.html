@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+		<title>北林I/O</title>
+		<meta name="description" content="Innovation in the Open.">
+
+		<link rel="shortcut icon" href="https://files.aofeisheng.com/images/favicons/bjfu.io.ico">
+		<link rel="apple-touch-icon" href="https://files.aofeisheng.com/images/apple-touch-icons/bjfu.io.png">
+
+		<style>
+			body {
+				background-color: #000;
+				color: #fff;
+				margin: 0;
+				padding: 0;
+			}
+
+			#constellation {
+				position: absolute;
+				z-index: -1;
+			}
+
+			#facade {
+				border: 1px solid #fff;
+				box-sizing: border-box;
+				display: none;
+				margin: 0 auto;
+				padding: 80px 0;
+				position: absolute;
+				text-align: center;
+				width: 500px;
+			}
+
+			#facade h1,
+			#facade p {
+				line-height: 1;
+				margin: 0;
+			}
+
+			#facade h1 {
+				font-size: 50px;
+			}
+
+			#facade p {
+				font-size: 24px;
+				margin-top: 36px;
+			}
+
+			@media screen and (max-width: 600px) {
+				#facade {
+					width: calc(100% - 20px);
+				}
+
+				#facade h1 {
+					font-size: 40px;
+				}
+
+				#facade p {
+					font-size: 16px;
+				}
+			}
+		</style>
+	</head>
+
+	<body>
+		<canvas id="constellation"></canvas>
+
+		<div id="facade">
+			<h1>北林I/O</h1>
+			<p>2016-03-21 至 2016-06-08</p>
+		</div>
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+		<script>
+			(function($, window) {
+				function Constellation(canvas, options) {
+					var $canvas = $(canvas);
+					var context = canvas.getContext("2d");
+					var config = $.extend(true, {}, {
+						star: {
+							color: "rgba(255, 255, 255, .5)",
+							width: 2,
+							randomWidth: true,
+						},
+						line: {
+							color: "rgba(255, 255, 255, .5)",
+							width: 0.2,
+						},
+						position: {
+							x: 0,
+							y: 0,
+						},
+						width: window.innerWidth,
+						height: window.innerHeight,
+						velocity: 0.1,
+						length: window.innerWidth > 800 ? 100 : 50,
+						distance: 120,
+						radius: 250,
+						stars: [],
+					}, options);
+
+					function Star() {
+						this.x = Math.random() * canvas.width;
+						this.y = Math.random() * canvas.height;
+
+						this.vx = (config.velocity - (Math.random() * 0.5));
+						this.vy = (config.velocity - (Math.random() * 0.5));
+
+						this.radius = config.star.randomWidth ? (Math.random() * config.star.width) : config.star.width;
+					}
+
+					Star.prototype = {
+						create: function() {
+							context.beginPath();
+							context.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+							context.fill();
+						},
+						animate: function() {
+							for (var i = 0; i < config.length; i++) {
+								var star = config.stars[i];
+								if (star.y < 0 || star.y > canvas.height) {
+									star.vx = star.vx;
+									star.vy = -star.vy;
+								} else if (star.x < 0 || star.x > canvas.width) {
+									star.vx = -star.vx;
+									star.vy = star.vy;
+								}
+
+								star.x += star.vx;
+								star.y += star.vy;
+							}
+						},
+						line: function() {
+							for (var i = 0; i < config.length; i++) {
+								for (var j = 0; j < config.length; j++) {
+									var iStar = config.stars[i];
+									var jStar = config.stars[j];
+									if (
+										(iStar.x - jStar.x) < config.distance &&
+										(iStar.y - jStar.y) < config.distance &&
+										(iStar.x - jStar.x) > -config.distance &&
+										(iStar.y - jStar.y) > -config.distance &&
+										(iStar.x - config.position.x) < config.radius &&
+										(iStar.y - config.position.y) < config.radius &&
+										(iStar.x - config.position.x) > -config.radius &&
+										(iStar.y - config.position.y) > -config.radius
+									) {
+										context.beginPath();
+										context.moveTo(iStar.x, iStar.y);
+										context.lineTo(jStar.x, jStar.y);
+										context.stroke();
+										context.closePath();
+									}
+								}
+							}
+						},
+					};
+
+					this.createStars = function() {
+						context.clearRect(0, 0, canvas.width, canvas.height);
+						for (var i = 0; i < config.length; i++) {
+							config.stars.push(new Star());
+							config.stars[i].create();
+						}
+
+						config.stars[config.length - 1].animate();
+						config.stars[config.length - 1].line();
+					};
+
+					this.setCanvas = function() {
+						canvas.width = config.width;
+						canvas.height = config.height;
+					};
+
+					this.setContext = function() {
+						context.fillStyle = config.star.color;
+						context.strokeStyle = config.line.color;
+						context.lineWidth = config.line.width;
+					};
+
+					this.setInitialPosition = function() {
+						if (!options || !options.hasOwnProperty("position")) {
+							config.position = {
+								x: canvas.width * 0.5,
+								y: canvas.height * 0.5,
+							};
+						}
+					};
+
+					this.loop = function(callback) {
+						callback();
+						window.requestAnimationFrame(function() {
+							this.loop(callback);
+						}.bind(this));
+					};
+
+					this.bind = function() {
+						$canvas.on("mousemove", function(e) {
+							config.position.x = e.pageX - $canvas.offset().left;
+							config.position.y = e.pageY - $canvas.offset().top;
+						});
+					};
+
+					this.init = function() {
+						this.setCanvas();
+						this.setContext();
+						this.setInitialPosition();
+						this.loop(this.createStars);
+						this.bind();
+					};
+				}
+
+				$.fn.constellation = function(options) {
+					return this.each(function() {
+						(new Constellation(this, options)).init();
+					});
+				};
+			})($, window);
+
+			$(document).ready(function() {  
+				$(window).resize();
+			});
+
+			$(window).resize(function() {
+				$("#facade").hide();
+				$("#facade").css({
+					top: ($(window).height() - $("#facade").outerHeight()) / 2 + $(document).scrollTop(),
+					left: ($(window).width() - $("#facade").outerWidth()) / 2,
+				});
+				$("#facade").show();
+				$("canvas#constellation").constellation();
+			});
+		</script>
+	</body>
+</html>
